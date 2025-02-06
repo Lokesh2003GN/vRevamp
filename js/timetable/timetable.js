@@ -204,7 +204,7 @@ X-WR-CALNAME:Classes`;
       endDateTime.setHours(endHour, endMinute, 0, 0);
 
       const eventName = createEventName(event.trim(), rename);
-      console.log(eventName);
+      //console.log(eventName);
       if (!eventName) return;
 
       if (previousEvent === eventName) {
