@@ -261,8 +261,7 @@ function formatDateTime(date) {
 function createDownloadLink(className, data, filename, type = "text/plain") {
   const blob = data ? new Blob([data], { type }) : null;
   const url = blob ? URL.createObjectURL(blob) : null;
-  let definition = "";
-  
+
   // Define button icons and text based on file type
   let icon = '<i class="fas fa-download"></i>'; // Default icon for download
   if (filename === "timetable.ics") {
@@ -284,6 +283,7 @@ function createDownloadLink(className, data, filename, type = "text/plain") {
     return downloadButton; // Return without further modification
   }
 
+  // Handle ICS file download
   if (filename === "timetable.ics") {
     downloadButton.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -293,27 +293,32 @@ function createDownloadLink(className, data, filename, type = "text/plain") {
         if (modifiedICS) {
           const modifiedBlob = new Blob([modifiedICS], { type });
           const modifiedUrl = URL.createObjectURL(modifiedBlob);
-          downloadButton.download = "timetable.ics";
-          downloadButton.href = modifiedUrl;
-          downloadButton.click(); // Trigger download
+          triggerDownload(modifiedUrl, filename); // Trigger download
         }
       } else {
-        downloadButton.download = filename;
-        downloadButton.href = url;
-        downloadButton.click();
+        triggerDownload(url, filename); // Trigger download without modification
       }
-    }, { once: true });
+    });
   } else {
+    // Handle other file types (e.g., PNG)
     downloadButton.addEventListener("click", () => {
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
+      triggerDownload(url, filename);
     });
   }
 
   return downloadButton;
 }
+
+// Helper function to trigger the download
+function triggerDownload(url, filename) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url); // Clean up the URL object
+    }
 
 
 // Function to prompt the user to modify course names in ICS data
