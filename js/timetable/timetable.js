@@ -20,6 +20,7 @@ const change_time_table = () => {
 };
 
 function displayTableData(headerData, childrenData) {
+  headerData = [...new Set(headerData)];
   // creating the table head
   headerData.splice(0, 1); // remove the first element which is just "starttime-endtime[1,4,9,16,25];"
 
@@ -74,8 +75,8 @@ function insertTable(table_div, headerData, childrenData) {
   
   //newly add code in insertTable
   const csvData = generateCSV(headerData, childrenData);// Generate CSV data for the timetable
-  /* const csvDownloadLink = createDownloadLink("download-timetable", csvData, "timetable.csv", "text/calendar");
-  parent_div.insertBefore(csvDownloadLink, table_div); */
+   const csvDownloadLink = createDownloadLink("download-timetable", csvData, "timetable.csv", "text/calendar");
+ /* parent_div.insertBefore(csvDownloadLink, table_div); */
   
   const temp = document.createElement("h1"); // this is just to create a space before table_div
    temp.textContent = "."; 
@@ -131,17 +132,28 @@ function generateCSV(headerData, childrenData) {
   });
   return csvContent;
 }
-
 // Function to create an event name from the schedule data
 function createEventName(event, rename = false) {
-  const match = event.match(/([A-Z]+\d{4})/); // Match course code (e.g., CSE1002)
-  if (rename && match) match = newNames[match];
-  const venueMatch = event.match(/(?:TH|LA)-(.*?)-ALL/); // Match venue 
+  let match = event.match(/([A-Z]+\d{4})/); // Match course code (e.g., CSE1002)
+  if (match) match = match[1];
+  if (rename && match) match = newNames[match[1]]; // Use match[1] as key
+  let venueMatch;
+  if (event.includes("ONL-ALL")) {
+    venueMatch = "Online";
+  } else {
+    venueMatch = event.match(/(?:TH|LA)-(.*?)-ALL/); // Match venue
+  }
+
   if (match && venueMatch) {
-    return `${match[1]} ${venueMatch[1]}`; // Return formatted event name
+    if (typeof venueMatch === "string") {
+      return `${match} ${venueMatch}`; // If venueMatch is "Online"
+    } else if (venueMatch[1]) {
+      return `${match} ${venueMatch[1]}`; // If venueMatch is a match object
+    }
   }
   return null; // Return null if no valid name is found
 }
+
 
 // Function to generate ICS data from CSV data for calendar integration
 function generateICSFromCSV(csvData, rename = false) {
@@ -172,14 +184,19 @@ X-WR-CALNAME:Classes`;
 
     row.slice(1).forEach((event, index) => {
       if (!event || event.trim() === "-" || event.trim().length < 8) return;
-
+      if(header[index]==="Lunch - Lunch") return;
       const timeRange = header[index].split("-").map((t) => t.trim()); // Extract start and end times
       if (!timeRange || timeRange.length !== 2) return;
 
       const [startTime, endTime] = timeRange;
       const [startHour, startMinute] = startTime.split(":").map(Number);
       const [endHour, endMinute] = endTime.split(":").map(Number);
-
+      
+      if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
+        console.error("Invalid time values:", { startHour, startMinute, endHour, endMinute });
+        return;
+      }
+      
       const startDateTime = new Date(eventDate);
       startDateTime.setHours(startHour, startMinute, 0, 0);
 
@@ -187,6 +204,7 @@ X-WR-CALNAME:Classes`;
       endDateTime.setHours(endHour, endMinute, 0, 0);
 
       const eventName = createEventName(event.trim(), rename);
+      console.log(eventName);
       if (!eventName) return;
 
       if (previousEvent === eventName) {
@@ -238,8 +256,12 @@ END:VCALENDAR`;
 
 // Function to format the date and time into the correct ISO format for ICS
 function formatDateTime(date) {
-  return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-}
+     if (!(date instanceof Date) || isNaN(date)) {
+       console.error("Invalid date:", date);
+       return null; // or handle the error appropriately
+     }
+     return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+   }
 
 // Function to create a download link for files (CSV, ICS, PNG)
 function createDownloadLink(className, data, filename, type = "text/plain") {
@@ -417,4 +439,4 @@ function addUserGuideOption(parentElement) {
     createUserGuidePopup();
   });
   parentElement.appendChild(guideLink);
-                         }
+                                                   }
