@@ -78,11 +78,6 @@ function insertTable(table_div, headerData, childrenData) {
    const csvDownloadLink = createDownloadLink("download-timetable", csvData, "timetable.csv", "text/calendar");
  /* parent_div.insertBefore(csvDownloadLink, table_div); */
   
-  const temp = document.createElement("h1"); // this is just to create a space before table_div
-   temp.textContent = "."; 
-   temp.style.color="white";
-parent_div.insertBefore(temp, table_div);
-
 
   // Generate ICS (iCalendar) data for scheduling events
   const icsData = generateICSFromCSV(csvData);
@@ -204,7 +199,6 @@ X-WR-CALNAME:Classes`;
       endDateTime.setHours(endHour, endMinute, 0, 0);
 
       const eventName = createEventName(event.trim(), rename);
-      //console.log(eventName);
       if (!eventName) return;
 
       if (previousEvent === eventName) {
@@ -263,62 +257,62 @@ function formatDateTime(date) {
      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
    }
 
-// Function to create a download link for files (CSV, ICS, PNG)
+// Function to create a download button using Bootstrap
 function createDownloadLink(className, data, filename, type = "text/plain") {
   const blob = data ? new Blob([data], { type }) : null;
   const url = blob ? URL.createObjectURL(blob) : null;
   let definition = "";
-  const downloadLink = document.createElement("a");
-  let icon = "&#xf019;"; // Default icon (for CSV)
-
-  // Define icons and description for specific file types
+  
+  // Define button icons and text based on file type
+  let icon = '<i class="fas fa-download"></i>'; // Default icon for download
   if (filename === "timetable.ics") {
-    icon = "&#x1F4C6;"; // Calendar icon for ICS
-    definition = " (used to schedule all classes automatically)";
+    icon = '<i class="fas fa-calendar-alt"></i>'; // Calendar icon
   }
   if (filename === "timetable.png") {
-    icon = "&#x1F5BC;"; // Image icon for PNG
+    icon = '<i class="fas fa-image"></i>'; // Image icon
   }
 
-  // Set class and inner HTML for the download link
-  downloadLink.className = className;
-  downloadLink.innerHTML = `<i style="font-size: 24px" class="fa">${icon}</i> Download ${filename}${definition}`;
-  
+  // Create the Bootstrap-styled button
+  const downloadButton = document.createElement("button");
+  downloadButton.className = `btn btn-primary ${className}`;
+  downloadButton.innerHTML = `${icon} Download ${filename}`;
+  downloadButton.style.margin = "10px";
+
   // Validate URL and filename
   if (!url || !filename) {
     console.error("Invalid URL or filename for download link:", { url, filename });
-    return downloadLink; // Return without further modification
+    return downloadButton; // Return without further modification
   }
 
   if (filename === "timetable.ics") {
-    downloadLink.addEventListener(
-      "click",
-      async (e) => {
-        e.preventDefault();
-        const userConfirmed = confirm("Do you need customization in the schedule? Click 'OK' for Yes and 'Cancel' for No.");
-        if (userConfirmed) {
-          const modifiedICS = promptForCourseNames(data); // Allow user to modify ICS data
-          if (modifiedICS) {
-            const modifiedBlob = new Blob([modifiedICS], { type });
-            const modifiedUrl = URL.createObjectURL(modifiedBlob);
-             downloadLink.download = "timetable.ics";
-            downloadLink.href = modifiedUrl;
-            downloadLink.click(); // Trigger download
-          }
-        } else {
-          downloadLink.download = filename;
-          downloadLink.href = url;
-          downloadLink.click();
+    downloadButton.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const userConfirmed = confirm("Do you need customization in the schedule? Click 'OK' for Yes and 'Cancel' for No.");
+      if (userConfirmed) {
+        const modifiedICS = promptForCourseNames(data); // Allow user to modify ICS data
+        if (modifiedICS) {
+          const modifiedBlob = new Blob([modifiedICS], { type });
+          const modifiedUrl = URL.createObjectURL(modifiedBlob);
+          downloadButton.download = "timetable.ics";
+          downloadButton.href = modifiedUrl;
+          downloadButton.click(); // Trigger download
         }
-      },
-      { once: true }
-    );
+      } else {
+        downloadButton.download = filename;
+        downloadButton.href = url;
+        downloadButton.click();
+      }
+    }, { once: true });
   } else {
-    downloadLink.download = filename;
-    downloadLink.href = url;
+    downloadButton.addEventListener("click", () => {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+    });
   }
 
-  return downloadLink;
+  return downloadButton;
 }
 
 
@@ -426,17 +420,28 @@ function createUserGuidePopup() {
   });
 }
 
-// Add the User Guide link next to the ICS link
-function addUserGuideOption(parentElement) {
-  const guideLink = document.createElement("a");
-  guideLink.href = "#";
-  guideLink.textContent = "User Guide";
-  guideLink.style.marginLeft = "10px";
-  guideLink.style.color = "#007BFF";
-  guideLink.style.cursor = "pointer";
-  guideLink.addEventListener("click", (e) => {
+// Add the User Guide button next to the ICS download button
+// Add the User Guide button next to the ICS download button (only if not already present)
+function addUserGuideOption(icsDownloadLink) {
+  // Check if the User Guide button already exists
+  if (document.getElementById("userGuideButton")) {
+    return; // Exit if the button is already present
+  }
+
+  // Create the User Guide button
+  const guideButton = document.createElement("button");
+  guideButton.id = "userGuideButton"; // Assign an ID to prevent duplication
+  guideButton.textContent = "User Guide";
+  guideButton.className = "btn btn-success"; // Bootstrap button style (optional)
+  guideButton.style.marginLeft = "10px";
+  guideButton.style.cursor = "pointer";
+
+  // Add event listener to open the User Guide popup
+  guideButton.addEventListener("click", (e) => {
     e.preventDefault();
     createUserGuidePopup();
   });
-  parentElement.appendChild(guideLink);
-}
+
+  // Insert the button next to the ICS download link
+  icsDownloadLink.parentElement.insertBefore(guideButton, icsDownloadLink.nextSibling);
+                     }
