@@ -82,7 +82,8 @@ function insertTable(table_div, headerData, childrenData) {
   // Generate ICS (iCalendar) data for scheduling events
   const icsData = generateICSFromCSV(csvData);
   const icsDownloadLink = createDownloadLink("download-timetable", icsData, "timetable.ics", "text/calendar");
-  parent_div.insertBefore(icsDownloadLink, table_div); // Insert ICS download link
+  icsDownloadLink.style.display="none";
+  parent_div.insertBefore(icsDownloadLink, table_div);   // Insert ICS download link
   addUserGuideOption(icsDownloadLink); //Insert user Guide
   
   const a = create_download_link("download-timetable");
@@ -94,6 +95,9 @@ function insertTable(table_div, headerData, childrenData) {
   );
   parent_div.insertBefore(a, table_div);
   
+  setTimeout(() => {
+        addFloatingDraggableButtons(icsDownloadLink);
+    }, 500);
 }
 
 const MutationObserverConfig = { attributes: true, childList: true, subtree: true };
@@ -305,7 +309,7 @@ function createDownloadLink(className, data, filename, type = "text/plain") {
       triggerDownload(url, filename);
     });
   }
-
+  
   return downloadButton;
 }
 
@@ -318,8 +322,7 @@ function triggerDownload(url, filename) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url); // Clean up the URL object
-    }
-
+}
 
 // Function to prompt the user to modify course names in ICS data
 function promptForCourseNames(data) {
@@ -364,6 +367,10 @@ function promptForCourseNames(data) {
 // Function to create a User Guide popup
 function createUserGuidePopup() {
   // Create the modal container
+  if (document.getElementById("userGuideModal")) {
+    document.getElementById("userGuideModal").remove();
+    return; // Exit if the button is already present
+  }
   const modal = document.createElement("div");
   modal.id = "userGuideModal";
   modal.style.position = "fixed";
@@ -446,7 +453,96 @@ function addUserGuideOption(icsDownloadLink) {
     e.preventDefault();
     createUserGuidePopup();
   });
-
+  guideButton.style.display="none";
   // Insert the button next to the ICS download link
   icsDownloadLink.parentElement.insertBefore(guideButton, icsDownloadLink.nextSibling);
-                     }
+  //icsDownloadLink.style.display="none";
+}
+
+
+
+function addFloatingDraggableButtons(icsDownloadLink) {
+    // Create a floating container for buttons
+    const existingContainer = document.getElementById("floatingButtonsContainer");
+    if (existingContainer) {
+        existingContainer.remove();
+    }
+    const floatingContainer = document.createElement("div");
+    floatingContainer.id = "floatingButtonsContainer";
+    floatingContainer.style.position = "fixed";
+    floatingContainer.style.bottom = "50px"; // Initial bottom position
+    floatingContainer.style.right = "20px";
+    floatingContainer.style.zIndex = "10000";
+    floatingContainer.style.padding = "10px";
+    floatingContainer.style.borderRadius = "8px";
+    floatingContainer.style.background = "rgba(0, 0, 0, 0.7)";
+    floatingContainer.style.boxShadow = "0px 4px 10px rgba(0, 0, 0, 0.3)";
+    floatingContainer.style.display = "flex";
+    floatingContainer.style.gap = "10px";
+    floatingContainer.style.cursor = "grab";
+
+    // Add ICS Download button
+    const icsButton = document.createElement("button");
+    icsButton.textContent = "📅 Download ICS";
+    icsButton.className = "btn btn-primary";
+    icsButton.style.padding = "10px 15px";
+    icsButton.style.borderRadius = "5px";
+    icsButton.style.cursor = "pointer";
+    icsButton.onclick = () => icsDownloadLink.click(); // Trigger ICS download
+
+    // Add User Guide button
+    const guideButton = document.createElement("button");
+    guideButton.textContent = "📖 User Guide";
+    guideButton.className = "btn btn-success";
+    guideButton.style.padding = "10px 15px";
+    guideButton.style.borderRadius = "5px";
+    guideButton.style.cursor = "pointer";
+    guideButton.onclick = createUserGuidePopup;
+
+    // Append buttons to floating container
+    floatingContainer.appendChild(icsButton);
+    floatingContainer.appendChild(guideButton);
+    document.body.appendChild(floatingContainer);
+
+    // Make buttons draggable
+    makeDraggable(floatingContainer);
+
+}
+
+// Function to enable dragging of the floating buttons
+// Function to enable dragging of the floating buttons
+function makeDraggable(element) {
+    let offsetX, offsetY, isDragging = false;
+
+    element.addEventListener("mousedown", (e) => {
+        // Only start dragging if the target is NOT a button or child element
+        if (e.target.tagName === "BUTTON") return;
+
+        isDragging = true;
+        offsetX = e.clientX - element.getBoundingClientRect().left;
+        offsetY = e.clientY - element.getBoundingClientRect().top;
+        element.style.cursor = "grabbing";
+
+        // Fix positioning issue when dragging
+        element.style.right = "auto";
+        element.style.bottom = "auto";
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        let x = e.clientX - offsetX;
+        let y = e.clientY - offsetY;
+
+        // Prevent it from moving off-screen
+        x = Math.max(0, Math.min(window.innerWidth - element.offsetWidth, x));
+        y = Math.max(0, Math.min(window.innerHeight - element.offsetHeight, y));
+
+        element.style.left = `${x}px`;
+        element.style.top = `${y}px`;
+    });
+
+    document.addEventListener("mouseup", () => {
+        isDragging = false;
+        element.style.cursor = "grab";
+    });
+}
